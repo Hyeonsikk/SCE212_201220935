@@ -197,6 +197,10 @@ void pass2() {
 			// 아닌 경우
 			if (!strcmp(sArr_3[0], instruction[k])) {
 				modevalue = k;
+				// bits 초기화
+				for (int a = 0; a < 32; a++) {
+					bits[a] = 0;
+				}
 				switch (modevalue)
 				{
 				case 0:
@@ -297,7 +301,7 @@ void pass2() {
 	// 결과물 출력
 	printf("---------INSTRUCTION----------\n");
 	for (int a = 0; a < line_count; a++) {
-		printf("address : 0x%06x  content : 0x%06x\n", line[a].address, line[a].content);
+		printf("address : 0x%06x  content : 0x%08x\n", line[a].address, line[a].content);
 	}
 	// line 수 출력
 	printf("line : %d \n", line_count);
@@ -315,6 +319,8 @@ int addiu(char * sArr_3[]) {
 	int temp_value;
 	int immediate;
 	int i, k;
+	int result_temp;
+	int result = 0;
 	//'$'자르기
 	for (int j = 0; j < 4; j++) {
 		sArr_result[j] = strtok(sArr_3[j], "$");
@@ -324,11 +330,48 @@ int addiu(char * sArr_3[]) {
 	reg_num2 = atoi(sArr_result[2]);
 	immediate = atoi(sArr_result[3]);
 	// machine code 변환
+	temp_value = reg_num1;
+	for (i = 0; temp_value > 0; i++) {
+		 bits[16+i] = temp_value % 2;
+		 temp_value /= 2;
+		 
+	}
+
+	temp_value = reg_num2;
+	for (i = 0; temp_value > 0; i++) {
+		bits[21 + i] = temp_value % 2;
+		temp_value /= 2;
+	}
+
+	temp_value = immediate;
+	for (i = 0; temp_value>0; i++) {
+		bits[i] = temp_value % 2;
+		temp_value /= 2;	
+	}
 	
+	// addiu -> opcode = 9 (hex)
+	temp_value = 9;
+	for (i = 0; temp_value>0; i++) {
+		bits[27+i] = temp_value % 2;
+		temp_value /= 2;
+	}
+	
+	// 모두 더한다
+	for (i = 0; i < 32; i++) {
+		result_temp = 1;
+		if (bits[i] == 1) {
+			for (int d = 0; d < i; d++) {
+				result_temp *= 2;
+			}
+			result += result_temp;
+		}
+		 
+	}
+	printf("%d ", result);
 	// addiu 연산 실행
 	$reg[reg_num1].content = $reg[reg_num2].content + immediate;
 	
-	return 4194396;
+	return result;
 }
 int addu(char* sArr_3[]) {
 	char * sArr_result[4] = { "" };
@@ -399,7 +442,7 @@ int beq(char* sArr_3[]) {
 	//'$'자르기
 	for (int j = 0; j < 4; j++) {
 		sArr_result[j] = strtok(sArr_3[j], "$");
-		printf("%s ", sArr_result[j]);
+		//printf("%s ", sArr_result[j]);
 	}
 	reg_num1 = atoi(sArr_result[1]);
 	reg_num2 = atoi(sArr_result[2]);
@@ -430,7 +473,7 @@ int bne(char* sArr_3[]) {
 	//'$'자르기
 	for (int j = 0; j < 4; j++) {
 		sArr_result[j] = strtok(sArr_3[j], "$");
-		printf("%s ", sArr_result[j]);
+		//printf("%s ", sArr_result[j]);
 	}
 	reg_num1 = atoi(sArr_result[1]);
 	reg_num2 = atoi(sArr_result[2]);
