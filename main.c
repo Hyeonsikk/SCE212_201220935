@@ -8,8 +8,8 @@
 #define LENGINTRU 6 // the maximum length of instruction
 #define MAXLINE 100 // the maximum line that the program can accept
 
-void pass1(); // one pass 
-void pass2();// two pass
+void pass1(char* input); // one pass 
+void pass2(char* input);// two pass
 
 // divide functions by each instrunction set
 // each of functions returns machine language (integer)
@@ -58,6 +58,10 @@ struct DATA {
 	int content;
 	int address;
 };
+struct MEMORY {
+	int content;
+	int address;
+};
 
 int PC = 4194308; // program counter
 int CUR_ADDR = 4194304; // current address
@@ -67,6 +71,8 @@ int bits[32] = { 0 }; // store each bit before translate into hexa code
 struct REGISTER reg[32]; // define register
 struct SYMBOL_TABLE table[10]; // define symbol table for one pass
 struct DATA data[100];
+struct MEMORY memory[4096];
+//struct MEMORY MEMORY[pow(2,32)-1];
 int sym_count = 0; // the number of symbol label
 int line_count = 0; // the number of instruction set
 int data_count = 0;
@@ -78,30 +84,31 @@ char *labelmain = "main:\n";
 char instruction[NUMINTRU][LENGINTRU] = { "addiu","addu","and","andi","beq","bne","j","jal","jr","lui","lw","la","nor","or","ori","sltiu",
 "sltu","sll","srl","sw","subu" };
 
-
-
 int main() {
-	
-	pass1(); // pass 1
 
-	pass2(); // pass 2
+	char input[32] = {NULL,};
+	printf("input file name : ");
+	scanf("%s", input);
+	pass1(input); // pass 1
+
+	pass2(input); // pass 2
 	
 	return 0;
 	
 }
 // make symbol table
-void pass1() {
+void pass1(char* input) {
 	FILE *fin; // file open
 	char s[81]; // store each line of input data
-	char *ptr; // variable for erasing " " 
-	char *sArr[6] = { "" }; // store string after erasing " " 
-	char *sArr_2[6] = { "" }; // store string after erasing "," 
+	char *ptr; 
+	char *sArr[6] = { "" };
+	char *sArr_2[6] = { "" }; 
 	
 	int i = 0;
 	int i2 = 0;
 	
 
-	fin = fopen("test_in.txt", "r");
+	fin = fopen(input, "r");
 	//open error check
 	if (fin == NULL) {
 		printf("failed to file open\n");
@@ -117,8 +124,8 @@ void pass1() {
 		ptr = strtok(s, "\t");
 		// erasing "\t"
 		while (ptr != NULL){
-			sArr[i] = ptr;     // 문자열을 자른 뒤 메모리 주소를 문자열 포인터 배열에 저장
-			i++;                       // 인덱스 증가
+			sArr[i] = ptr;     
+			i++;                       
 			ptr = strtok(NULL, "\t");
 		}
 		// erasing " "
@@ -126,8 +133,8 @@ void pass1() {
 			sArr_2[j] = strtok(sArr[j], " ");
 
 			while (sArr[j] != NULL){
-				sArr_2[i2] = sArr[j];     // 문자열을 자른 뒤 메모리 주소를 문자열 포인터 배열에 저장
-				i2++;                       // 인덱스 증가
+				sArr_2[i2] = sArr[j];     
+				i2++;                       
 				sArr[j] = strtok(NULL, " ");
 			}
 		}
@@ -193,7 +200,7 @@ void pass1() {
 	}
 	fclose(fin);
 }
-void pass2() {
+void pass2(char* input) {
 	int modevalue;
 	int result;
 
@@ -201,14 +208,14 @@ void pass2() {
 	FILE *fin;
 	FILE *fout;
 	char s[81]; // store each line of input data
-	char *ptr; // variable for erasing " " 
-	char *sArr[6] = { "" }; // store string after erasing " " 
-	char *sArr_2[6] = { "" }; // store string after erasing "," 
+	char *ptr; 
+	char *sArr[6] = { "" }; 
+	char *sArr_2[6] = { "" }; 
 	int i = 0; // the number of token by line
 	int i2 = 0;
 
-	fin = fopen("test_in.txt", "r");
-	fout = fopen("test_out.txt", "w");
+	fin = fopen(input, "r");
+	fout = fopen("test_result.txt", "w");
 
 	if (fin == NULL) {
 		printf("failed to file open\n");
@@ -396,12 +403,11 @@ void pass2() {
 		printf("---------INSTRUCTION----------\n");
 		for (int a = 0; a < line_count; a++) {
 			printf("address : 0x%06x  content : 0x%08x\n", line[a].address, line[a].content);
+			fprintf(fout,"0x%08x\n" ,line[a].content);
 		}
 		// prints the number of label
 		printf("line : %d \n", line_count);
 	}
-	//printf("Cur addr : %x\n", CUR_ADDR);
-	//printf("pc : %x\n", PC);
 
 	fclose(fin);
 	fclose(fout);
@@ -418,7 +424,6 @@ int addiu(char * sArr_3[]) {
 	// erasing '$'
 	for (int j = 0; j < 4; j++) {
 		sArr_result[j] = strtok(sArr_3[j], "$");
-		//printf("%s ", sArr_result[j]);
 	}
 	reg_num1 = atoi(sArr_result[1]);
 	reg_num2 = atoi(sArr_result[2]);
@@ -468,6 +473,7 @@ int addiu(char * sArr_3[]) {
 	}
 	// execute operation (addiu) 
 	reg[reg_num1].content = reg[reg_num2].content + immediate;
+
 	
 	return result;
 }
@@ -484,7 +490,6 @@ int addu(char* sArr_3[]) {
 	// erasing '$'
 	for (int j = 0; j < 4; j++) {
 		sArr_result[j] = strtok(sArr_3[j], "$");
-		//printf("%s ", sArr_result[j]);
 	}
 	reg_num1 = atoi(sArr_result[1]);
 	reg_num2 = atoi(sArr_result[2]);
@@ -681,19 +686,16 @@ int beq(char* sArr_3[]) {
 	}
 	reg_num1 = atoi(sArr_result[1]);
 	reg_num2 = atoi(sArr_result[2]);
-	
-	
-
+	// searchin SYMBOL_TABLE 
+	for (int i = 0; i < sym_count; i++) {
+		// if it is correct
+		if (!(strcmp(table[i].symbol, sArr_result[3]))) {
+			addr = table[i].address;
+			break;
+		}
+	}
 	// execute operation (beq) 
 	if (reg[reg_num1].content == reg[reg_num2].content) {
-		// searchin SYMBOL_TABLE 
-		for (int i = 0; i < sym_count; i++) {
-			// if it is correct
-			if (!(strcmp(table[i].symbol, sArr_result[3]))) {
-				addr = table[i].address;
-				break;
-			}
-		}
 		PC = PC + 4 + addr;
 	}
 
@@ -755,18 +757,17 @@ int bne(char* sArr_3[]) {
 	}
 	reg_num1 = atoi(sArr_result[1]);
 	reg_num2 = atoi(sArr_result[2]);
-	
+	// searchin SYMBOL_TABLE 
+	for (int i = 0; i < sym_count; i++) {
+		// if it is correct
+		if (!(strcmp(table[i].symbol, sArr_result[3]))) {
+			addr = table[i].address;
+			break;
+		}
+	}
 	
 	// execute operation (bne) 
 	if (reg[reg_num1].content != reg[reg_num2].content) {
-		// searchin SYMBOL_TABLE 
-		for (int i = 0; i < sym_count; i++) {
-			// if it is correct
-			if (!(strcmp(table[i].symbol, sArr_result[3]))) {
-				addr = table[i].address;
-				break;
-			}
-		}
 		 PC = PC+4+addr;
 	}
 	// translate into machine code
@@ -834,7 +835,7 @@ int j(char* sArr_3[]) {
 		bits[26 + i] = temp_value % 2;
 		temp_value /= 2;
 	}
-	// symbol table의 address
+	// symbol table\C0\C7 address
 	temp_value = addr;
 	for (i = 0; temp_value>0; i++) {
 		bits[i] = temp_value % 2;
@@ -883,7 +884,7 @@ int jal(char* sArr_3[]) {
 		bits[26 + i] = temp_value % 2;
 		temp_value /= 2;
 	}
-	// symbol table의 address
+	// symbol table\C0\C7 address
 	temp_value = addr;
 	for (i = 0; temp_value>0; i++) {
 		bits[i] = temp_value % 2;
@@ -1028,7 +1029,6 @@ int or(char* sArr_3[]) {
 	//erasing '$'
 	for (int j = 0; j < 4; j++) {
 		sArr_result[j] = strtok(sArr_3[j], "$");
-		//printf("%s ", sArr_result[j]);
 	}
 	reg_num1 = atoi(sArr_result[1]);
 	reg_num2 = atoi(sArr_result[2]);
@@ -1089,7 +1089,7 @@ int ori(char* sArr_3[]) {
 	// erasing '$'
 	for (int j = 0; j < 4; j++) {
 		sArr_result[j] = strtok(sArr_3[j], "$");
-		printf("%s ", sArr_result[j]);
+		
 	}
 	reg_num1 = atoi(sArr_result[1]);
 	reg_num2 = atoi(sArr_result[2]);
@@ -1159,7 +1159,6 @@ int sltiu(char* sArr_3[]) {
 	//erasing '$'
 	for (int j = 0; j < 4; j++) {
 		sArr_result[j] = strtok(sArr_3[j], "$");
-		//printf("%s ", sArr_result[j]);
 	}
 	reg_num1 = atoi(sArr_result[1]);
 	reg_num2 = atoi(sArr_result[2]);
@@ -1229,7 +1228,7 @@ int sltu(char* sArr_3[]) {
 	//erasing '$'
 	for (int j = 0; j < 4; j++) {
 		sArr_result[j] = strtok(sArr_3[j], "$");
-		//printf("%s ", sArr_result[j]);
+
 	}
 	reg_num1 = atoi(sArr_result[1]);
 	reg_num2 = atoi(sArr_result[2]);
@@ -1294,7 +1293,7 @@ int sll(char* sArr_3[]) {
 	//erasing '$'
 	for (int j = 0; j < 4; j++) {
 		sArr_result[j] = strtok(sArr_3[j], "$");
-		//printf("%s ", sArr_result[j]);
+	
 	}
 	reg_num1 = atoi(sArr_result[1]);
 	reg_num2 = atoi(sArr_result[2]);
@@ -1357,7 +1356,7 @@ int srl(char* sArr_3[]) {
 	//erasing '$'
 	for (int j = 0; j < 4; j++) {
 		sArr_result[j] = strtok(sArr_3[j], "$");
-		//printf("%s ", sArr_result[j]);
+
 	}
 	reg_num1 = atoi(sArr_result[1]);
 	reg_num2 = atoi(sArr_result[2]);
@@ -1410,6 +1409,31 @@ int srl(char* sArr_3[]) {
 	return result;
 }
 int sw(char * sArr_3[]) {
+	char * sArr_result[3] = { "" };
+	char * ptr;
+	char * sArr_memory[2] = { "" };
+	int i = 0;
+
+	for (int j = 0; j < 4; j++) {
+		sArr_result[j] = strtok(sArr_3[j], "$");
+	}
+
+	// memory reference
+	// divide format a($b) into a b
+	sArr_memory[0] = strtok(sArr_result[2], "(");
+	ptr = strtok(sArr_result[2], "(");
+	while (ptr != NULL) {
+		sArr_memory[i] = ptr;
+		i++;
+		ptr = strtok(NULL, "(");
+	}
+		sArr_memory[1] = strtok(sArr_memory[1], ")");
+		sArr_memory[1] = strtok(sArr_memory[1], "$");
+
+	
+
+	
+	
 
 	return 0;
 }
@@ -1426,7 +1450,7 @@ int subu(char * sArr_3[]) {
 	//erasing '$'
 	for (int j = 0; j < 4; j++) {
 		sArr_result[j] = strtok(sArr_3[j], "$");
-		//printf("%s ", sArr_result[j]);
+	
 	}
 	reg_num1 = atoi(sArr_result[1]);
 	reg_num2 = atoi(sArr_result[2]);
@@ -1494,7 +1518,5 @@ int hexTodec(char* sArr) {
 
 		position++;
 	}
-	//printf("%d", decimal);
-
 	return decimal;
 }
