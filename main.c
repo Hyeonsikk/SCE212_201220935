@@ -2,12 +2,16 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define NUMINTRU  21
-#define LENGINTRU 6
-#define MAXLINE 100
+#define NUMINTRU  21 // the number of instrunction
+#define LENGINTRU 6 // the maximum length of instruction
+#define MAXLINE 100 // the maximum line that the program can accept
 
-void pass1();
-void pass2();
+void pass1(); // one pass 
+void pass2();// two pass
+
+// divide functions by each instrunction set
+// each of functions returns machine language (integer)
+// it is written in hexa code by using "%x"
 int addiu(char* sArr[]);
 int addu(char* sArr[]);
 int and(char* sArr[]);
@@ -35,25 +39,26 @@ struct SYMBOL_TABLE {
 	char symbol[10];
 	int address;
 };
-// Line 별 정보
+// structure of each line 
 struct LINE {
 	int address;
 	int content;
 };
-// REGISTER 정보
+// structure of REGISTER 
 struct REGISTER {
 	int content;
 	int address;
 };
 
-int PC = 4194308;
-int CUR_ADDR = 4194304;
-int bits[32] = { 0 };
+int PC = 4194308; // program counter
+int CUR_ADDR = 4194304; // current address
+int bits[32] = { 0 }; // store each bit before translate into hexa code
 // define register (0 - 31) 
-struct REGISTER $reg[32];
-struct SYMBOL_TABLE table[10];
-int sym_count = 0;
-int line_count = 0;
+struct REGISTER reg[32]; // define register
+struct SYMBOL_TABLE table[10]; // define symbol table for one pass
+int sym_count = 0; // the number of symbol label
+int line_count = 0; // the number of instruction set 
+// instruction set
 char instruction[NUMINTRU][LENGINTRU] = { "ADDIU","ADDU","AND","ANDI","BEQ","BNE","J","JAL","JR","LUI","LW","LA","NOR","OR","ORI","SLTIU",
 "SLTU","SLL","SRL","SW","SUBU" };
 
@@ -61,59 +66,58 @@ char instruction[NUMINTRU][LENGINTRU] = { "ADDIU","ADDU","AND","ANDI","BEQ","BNE
 
 int main() {
 	
-	pass1();
+	pass1(); // pass 1
 
-	pass2();
+	pass2(); // pass 2
 	
 	return 0;
 	
 }
+// make symbol table
 void pass1() {
-	FILE *fin;
-	char s[81];
-	char *ptr; // " " 자르는 변수
-	char *sArr[6] = { "" }; // " "로 자른 문자열 저장
-	char *sArr_2[6] = { "" }; // ","로 자른 문자열 저장
-	char *sArr_3[6] = { "" }; // "\t"로 자른 문자열 저장
+	FILE *fin; // file open
+	char s[81]; // store each line of input data
+	char *ptr; // variable for erasing " " 
+	char *sArr[6] = { "" }; // store string after erasing " " 
+	char *sArr_2[6] = { "" }; // store string after erasing "," 
+	char *sArr_3[6] = { "" }; // store string after erasing "\t" 
 	int i = 0;
 
-	fin = fopen("test_in.txt", "r");
+	fin = fopen("test_in.s", "r");
 	//open error check
 	if (fin == NULL) {
 		printf("failed to file open\n");
 		return 1;
 	}
 	while (!feof(fin)) {
-		// 한 줄씩 읽어오기
+		// read a line
 		fgets(s, 80, fin);
-		// PC 값 증가
+		// increment of PC 
 		PC = PC + 4;
 
-		//printf("PC : 0x%06x", pc); --> pc값 출력
-
-		// " "로 자른다
+		// erasing " "
 		ptr = strtok(s, " ");
+
 		// main 안에만 구현했다고 가정
 
 		while (ptr != NULL) {
-			sArr[i] = ptr; // 문자열을 자른 뒤 메모리 주소를 문자열 포인터 배열에 저장
+			sArr[i] = ptr;  
 			i++;
 			ptr = strtok(NULL, " ");
 		}
-		// ',' 자르기
+		// erasing ','
 		for (int j = 0; j < i; j++) {
 			sArr_2[j] = strtok(sArr[j], ",");
 		}
-		// '\t' 자르기
+		// erasing '\t'
 		for (int j = 0; j < i; j++) {
 			sArr_3[j] = strtok(sArr_2[j], "\t");
 			//printf("%s", sArr_3[j]);
 		}
-		//printf("\n");
 		
-		// label인 경우
+		// if the string is label
 		if (!(strchr(sArr_3[0], ':') == NULL)) {
-			// symbol table에 추가
+			// adds symbol table
 			strcpy(table[sym_count].symbol, strtok(sArr_3[0], ":"));
 			table[sym_count].address = CUR_ADDR;
 			sym_count++;
@@ -122,7 +126,7 @@ void pass1() {
 		CUR_ADDR = PC;
 		i = 0;
 	}
-	// symbol table 출력
+	// prints symbol table
 	printf("--------SYMBOL_TABLE---------\n");
 	for (int z = 0; z < sym_count; z++) {
 		printf("SYMBOL : %s ADDR : 0x%x\n", table[z].symbol, table[z].address);
@@ -136,14 +140,14 @@ void pass2() {
 	struct LINE line[MAXLINE];
 	FILE *fin;
 	FILE *fout;
-	char s[81];
-	char *ptr; // " " 자르는 변수
-	char *sArr[6] = { "" }; // " "로 자른 문자열 저장
-	char *sArr_2[6] = { "" }; // ","로 자른 문자열 저장
-	char *sArr_3[6] = { "" }; // "\t"로 자른 문자열 저장
-	int i = 0; // 라인 별 token 수 
+	char s[81]; // store each line of input data
+	char *ptr; // variable for erasing " " 
+	char *sArr[6] = { "" }; // store string after erasing " " 
+	char *sArr_2[6] = { "" }; // store string after erasing "," 
+	char *sArr_3[6] = { "" }; // store string after erasing "\t" 
+	int i = 0; // the number of token by line
 
-	fin = fopen("test_in.txt", "r");
+	fin = fopen("test_in.s", "r");
 	fout = fopen("test_out.txt", "w");
 
 	if (fin == NULL) {
@@ -155,49 +159,46 @@ void pass2() {
 		return 1;
 	}
 
-	// pass 2 current_address, PC, line_count 값 초기화
+	// initializes the value of pass 2 current_address, PC, line_count 
 	CUR_ADDR = 4194304;
 	PC = CUR_ADDR + 4;
 	line_count = 0;
 	while (!feof(fin)) {
-		// 한 줄씩 읽어오기
+		// read a line
 		fgets(s, 80, fin);
-		// PC 값 증가
+		// increment of PC 
 		PC = PC + 4;
 
-		//printf("PC : 0x%06x", pc); --> pc값 출력
-
-		// " "로 자른다
+		// erasing " "
 		ptr = strtok(s, " ");
-		// main 안에만 구현했다고 가정
-
+		
 		while (ptr != NULL) {
-			sArr[i] = ptr; // 문자열을 자른 뒤 메모리 주소를 문자열 포인터 배열에 저장
+			sArr[i] = ptr; 
 			i++;
 			ptr = strtok(NULL, " ");
 		}
-		// ',' 자르기
+		// erasing ","
 		for (int j = 0; j < i; j++) {
 			sArr_2[j] = strtok(sArr[j], ",");
 		}
-		// '\t' 자르기
+		// erasing "\t"
 		for (int j = 0; j < i; j++) {
 			sArr_3[j] = strtok(sArr_2[j], "\t");
 			//printf("%s", sArr_3[j]);
 		}
-		//printf("\n");
-		// instruction set과 비교 성공
+		
+		// comparing with instruction set
 		for (int k = 0; k < NUMINTRU; k++) {
-			//LABEL인 경우
+			// if the string is LABEL
 			if (!(strchr(sArr_3[0], ':') == NULL)) {
 				line[line_count].address = CUR_ADDR;
 				line[line_count].content = NULL;
 				break;
 			}
-			// 아닌 경우
+			// if the string is not LABEL
 			if (!strcmp(sArr_3[0], instruction[k])) {
 				modevalue = k;
-				// bits 초기화
+				// initializes bits
 				for (int a = 0; a < 32; a++) {
 					bits[a] = 0;
 				}
@@ -298,12 +299,12 @@ void pass2() {
 		line_count++;
 		i = 0;
 	}
-	// 결과물 출력
+	// prints the result 
 	printf("---------INSTRUCTION----------\n");
 	for (int a = 0; a < line_count; a++) {
 		printf("address : 0x%06x  content : 0x%08x\n", line[a].address, line[a].content);
 	}
-	// line 수 출력
+	// prints the number of label
 	printf("line : %d \n", line_count);
 	//printf("Cur addr : %x\n", CUR_ADDR);
 	//printf("pc : %x\n", PC);
@@ -320,7 +321,7 @@ int addiu(char * sArr_3[]) {
 	int i;
 	int result_temp;
 	int result = 0;
-	//'$'자르기
+	// erasing '$'
 	for (int j = 0; j < 4; j++) {
 		sArr_result[j] = strtok(sArr_3[j], "$");
 		//printf("%s ", sArr_result[j]);
@@ -328,14 +329,13 @@ int addiu(char * sArr_3[]) {
 	reg_num1 = atoi(sArr_result[1]);
 	reg_num2 = atoi(sArr_result[2]);
 	immediate = atoi(sArr_result[3]);
-	// machine code 변환
+	// translate into machine code 
 	temp_value = reg_num1;
 	for (i = 0; temp_value > 0; i++) {
-		 bits[16+i] = temp_value % 2;
-		 temp_value /= 2;
-		 
-	}
+		bits[16 + i] = temp_value % 2;
+		temp_value /= 2;
 
+	}
 	temp_value = reg_num2;
 	for (i = 0; temp_value > 0; i++) {
 		bits[21 + i] = temp_value % 2;
@@ -355,7 +355,7 @@ int addiu(char * sArr_3[]) {
 		temp_value /= 2;
 	}
 	
-	// 모두 더한다
+	// adds all value of bits 
 	for (i = 0; i < 32; i++) {
 		result_temp = 1;
 		if (bits[i] == 1) {
@@ -366,8 +366,8 @@ int addiu(char * sArr_3[]) {
 		}
 		 
 	}
-	// addiu 연산 실행
-	$reg[reg_num1].content = $reg[reg_num2].content + immediate;
+	// execute operation (addiu) 
+	reg[reg_num1].content = reg[reg_num2].content + immediate;
 	
 	return result;
 }
@@ -381,7 +381,7 @@ int addu(char* sArr_3[]) {
 	int result_temp;
 	int result = 0;
 
-	//'$'자르기
+	// erasing '$'
 	for (int j = 0; j < 4; j++) {
 		sArr_result[j] = strtok(sArr_3[j], "$");
 		//printf("%s ", sArr_result[j]);
@@ -392,8 +392,7 @@ int addu(char* sArr_3[]) {
 
 	
 
-	// machine code 변환
-	
+	// translate into machine code
 	temp_value = reg_num1;
 	for (i = 0; temp_value > 0; i++) {
 		bits[11 + i] = temp_value % 2;
@@ -417,7 +416,7 @@ int addu(char* sArr_3[]) {
 		bits[i] = temp_value % 2;
 		temp_value /= 2;
 	}
-	// 모두 더한다
+	// adds all value of bits 
 	for (i = 0; i < 32; i++) {
 		result_temp = 1;
 		if (bits[i] == 1) {
@@ -429,8 +428,8 @@ int addu(char* sArr_3[]) {
 
 	}
 
-	// addu 연산 실행
-	$reg[reg_num1].content = $reg[reg_num2].content + $reg[reg_num3].content;
+	// execute operation (addu) 
+	reg[reg_num1].content = reg[reg_num2].content + reg[reg_num3].content;
 	return result;
 }
 int and(char* sArr_3[]) {
@@ -443,7 +442,7 @@ int and(char* sArr_3[]) {
 	int result_temp;
 	int result = 0;
 
-	//'$'자르기
+	// erasing '$'
 	for (int j = 0; j < 4; j++) {
 		sArr_result[j] = strtok(sArr_3[j], "$");
 		//printf("%s ", sArr_result[j]);
@@ -453,7 +452,7 @@ int and(char* sArr_3[]) {
 	reg_num3 = atoi(sArr_result[3]);
 
 
-	// machine code 변환
+	// translate into machine code 
 
 	temp_value = reg_num1;
 	for (i = 0; temp_value > 0; i++) {
@@ -478,7 +477,7 @@ int and(char* sArr_3[]) {
 		bits[i] = temp_value % 2;
 		temp_value /= 2;
 	}
-	// 모두 더한다
+	// adds all value of bits 
 	for (i = 0; i < 32; i++) {
 		result_temp = 1;
 		if (bits[i] == 1) {
@@ -490,8 +489,8 @@ int and(char* sArr_3[]) {
 
 	}
 
-	// and 연산 실행
-	$reg[reg_num1].content = $reg[reg_num2].content & $reg[reg_num3].content;
+	// execute operation (and) 
+	reg[reg_num1].content = reg[reg_num2].content & reg[reg_num3].content;
 
 	return result;
 }
@@ -505,7 +504,7 @@ int andi(char* sArr_3[]) {
 	int result_temp;
 	int result = 0;
 
-	//'$'자르기
+	//erasing '$'
 	for (int j = 0; j < 4; j++) {
 		sArr_result[j] = strtok(sArr_3[j], "$");
 		printf("%s ", sArr_result[j]);
@@ -514,7 +513,7 @@ int andi(char* sArr_3[]) {
 	reg_num2 = atoi(sArr_result[2]);
 	immediate = atoi(sArr_result[3]);
 
-	// machine code 변환
+	// translate into machine code 
 	temp_value = reg_num1;
 	for (i = 0; temp_value > 0; i++) {
 		bits[16 + i] = temp_value % 2;
@@ -541,7 +540,7 @@ int andi(char* sArr_3[]) {
 		temp_value /= 2;
 	}
 
-	// 모두 더한다
+	// adds all value of bits 
 	for (i = 0; i < 32; i++) {
 		result_temp = 1;
 		if (bits[i] == 1) {
@@ -553,8 +552,8 @@ int andi(char* sArr_3[]) {
 
 	}
 
-	// andi 연산 실행
-	$reg[reg_num1].content = $reg[reg_num2].content & immediate;
+	// execute operation (andi) 
+	reg[reg_num1].content = reg[reg_num2].content & immediate;
 	
 	return result;
 }
@@ -568,7 +567,7 @@ int beq(char* sArr_3[]) {
 	int result_temp;
 	int result = 0;
 
-	//'$'자르기
+	//erasing '$'
 	for (int j = 0; j < 4; j++) {
 		sArr_result[j] = strtok(sArr_3[j], "$");
 		//printf("%s ", sArr_result[j]);
@@ -578,11 +577,11 @@ int beq(char* sArr_3[]) {
 	
 	
 
-	// beq 연산 실행
-	if ($reg[reg_num1].content == $reg[reg_num2].content) {
-		// SYMBOL_TABLE 검색
+	// execute operation (beq) 
+	if (reg[reg_num1].content == reg[reg_num2].content) {
+		// searchin SYMBOL_TABLE 
 		for (int i = 0; i < sym_count; i++) {
-			// 일치하는 경우
+			// if it is correct
 			if (!(strcmp(table[i].symbol, sArr_result[3]))) {
 				addr = table[i].address;
 				break;
@@ -591,7 +590,7 @@ int beq(char* sArr_3[]) {
 		PC = PC + 4 + addr;
 	}
 
-	// machine code 변환
+	// translate into machine code
 	temp_value = reg_num1;
 	for (i = 0; temp_value > 0; i++) {
 		bits[16 + i] = temp_value % 2;
@@ -617,7 +616,7 @@ int beq(char* sArr_3[]) {
 		temp_value /= 2;
 	}
 
-	// 모두 더한다
+	// adds all value of bits 
 	for (i = 0; i < 32; i++) {
 		result_temp = 1;
 		if (bits[i] == 1) {
@@ -642,7 +641,7 @@ int bne(char* sArr_3[]) {
 	int result_temp;
 	int result = 0;
 
-	//'$'자르기
+	//'erasing '$'
 	for (int j = 0; j < 4; j++) {
 		sArr_result[j] = strtok(sArr_3[j], "$");
 		//printf("%s ", sArr_result[j]);
@@ -651,11 +650,11 @@ int bne(char* sArr_3[]) {
 	reg_num2 = atoi(sArr_result[2]);
 	
 	
-	// bne 연산 실행
-	if ($reg[reg_num1].content != $reg[reg_num2].content) {
-		// SYMBOL_TABLE 검색
+	// execute operation (bne) 
+	if (reg[reg_num1].content != reg[reg_num2].content) {
+		// searchin SYMBOL_TABLE 
 		for (int i = 0; i < sym_count; i++) {
-			// 일치하는 경우
+			// if it is correct
 			if (!(strcmp(table[i].symbol, sArr_result[3]))) {
 				addr = table[i].address;
 				break;
@@ -663,7 +662,7 @@ int bne(char* sArr_3[]) {
 		}
 		 PC = PC+4+addr;
 	}
-	// machine code 변환
+	// translate into machine code
 	temp_value = reg_num1;
 	for (i = 0; temp_value > 0; i++) {
 		bits[16 + i] = temp_value % 2;
@@ -689,7 +688,7 @@ int bne(char* sArr_3[]) {
 		temp_value /= 2;
 	}
 
-	// 모두 더한다
+	// adds all value of bits 
 	for (i = 0; i < 32; i++) {
 		result_temp = 1;
 		if (bits[i] == 1) {
@@ -711,16 +710,16 @@ int j(char* sArr_3[]) {
 	int result_temp;
 	int result = 0;
 	
-	// SYMBOL_TABLE 검색
+	// searchin SYMBOL_TABLE 
 	for (int i = 0; i < sym_count; i++) {
-		// 일치하는 경우
+		// if it is correct
 		if (!(strcmp(table[i].symbol, sArr_3[1]))) {
 			PC = table[i].address;
 			addr  = table[i].address;
 			break;
 		}
 	}
-	// machine code 변환
+	// translate into machine code
 	
 	// j -> opcode = 2 (hex)
 	temp_value = 2;
@@ -735,7 +734,7 @@ int j(char* sArr_3[]) {
 		temp_value /= 2;
 	}
 
-	// 모두 더한다
+	// adds all value of bits 
 	for (i = 0; i < 32; i++) {
 		result_temp = 1;
 		if (bits[i] == 1) {
@@ -757,11 +756,11 @@ int jal(char* sArr_3[]) {
 	int result_temp;
 	int result = 0;
 
-	// jal 연산 실행
-	$reg[31].content = PC + 8;
-	// SYMBOL_TABLE 검색
+	// execute operation (jar) 
+	reg[31].content = PC + 8;
+	// searchin SYMBOL_TABLE 
 	for (int i = 0; i < sym_count; i++) {
-		// 일치하는 경우
+		// if it is correct
 		if (!(strcmp(table[i].symbol, sArr_3[1]))) {
 			PC = table[i].address;
 			addr = table[i].address;
@@ -769,7 +768,7 @@ int jal(char* sArr_3[]) {
 		}
 	}
 
-	// machine code 변환
+	// translate into machine code
 
 	// j -> opcode = 2 (hex)
 	temp_value = 2;
@@ -784,7 +783,7 @@ int jal(char* sArr_3[]) {
 		temp_value /= 2;
 	}
 
-	// 모두 더한다
+	// adds all value of bits 
 	for (i = 0; i < 32; i++) {
 		result_temp = 1;
 		if (bits[i] == 1) {
@@ -807,12 +806,12 @@ int jr(char* sArr_3[]) {
 	int result_temp;
 	int result = 0;
 
-	//'$'자르기
+	//erasing '$'
 	
 	sArr_result[1] = strtok(sArr_3[1], "$");
 	reg_num1 = atoi(sArr_result[1]);
 	
-	// machine code 변환
+	// translate into machine code
 
 	temp_value = reg_num1;
 	for (i = 0; temp_value > 0; i++) {
@@ -826,7 +825,7 @@ int jr(char* sArr_3[]) {
 		bits[i] = temp_value % 2;
 		temp_value /= 2;
 	}
-	// 모두 더한다
+	// adds all value of bits 
 	for (i = 0; i < 32; i++) {
 		result_temp = 1;
 		if (bits[i] == 1) {
@@ -858,7 +857,7 @@ int nor(char* sArr_3[]) {
 	int result_temp;
 	int result = 0;
 
-	//'$'자르기
+	//erasing '$'
 	for (int j = 0; j < 4; j++) {
 		sArr_result[j] = strtok(sArr_3[j], "$");
 		//printf("%s ", sArr_result[j]);
@@ -867,7 +866,7 @@ int nor(char* sArr_3[]) {
 	reg_num2 = atoi(sArr_result[2]);
 	reg_num3 = atoi(sArr_result[3]);
 
-	// machine code 변환
+	// translate into machine code
 
 	temp_value = reg_num1;
 	for (i = 0; temp_value > 0; i++) {
@@ -892,7 +891,7 @@ int nor(char* sArr_3[]) {
 		bits[i] = temp_value % 2;
 		temp_value /= 2;
 	}
-	// 모두 더한다
+	// adds all value of bits 
 	for (i = 0; i < 32; i++) {
 		result_temp = 1;
 		if (bits[i] == 1) {
@@ -904,8 +903,8 @@ int nor(char* sArr_3[]) {
 
 	}
 
-	// and 연산 실행
-	$reg[reg_num1].content = !($reg[reg_num2].content || $reg[reg_num3].content);
+	// execute operation (nor) 
+	reg[reg_num1].content = !(reg[reg_num2].content || reg[reg_num3].content);
 
 	return result;
 }
@@ -919,7 +918,7 @@ int or(char* sArr_3[]) {
 	int result_temp;
 	int result = 0;
 
-	//'$'자르기
+	//erasing '$'
 	for (int j = 0; j < 4; j++) {
 		sArr_result[j] = strtok(sArr_3[j], "$");
 		//printf("%s ", sArr_result[j]);
@@ -928,7 +927,7 @@ int or(char* sArr_3[]) {
 	reg_num2 = atoi(sArr_result[2]);
 	reg_num3 = atoi(sArr_result[3]);
 
-	// machine code 변환
+	// translate into machine code
 
 	temp_value = reg_num1;
 	for (i = 0; temp_value > 0; i++) {
@@ -953,7 +952,7 @@ int or(char* sArr_3[]) {
 		bits[i] = temp_value % 2;
 		temp_value /= 2;
 	}
-	// 모두 더한다
+	// adds all value of bits 
 	for (i = 0; i < 32; i++) {
 		result_temp = 1;
 		if (bits[i] == 1) {
@@ -965,8 +964,8 @@ int or(char* sArr_3[]) {
 
 	}
 
-	// and 연산 실행
-	$reg[reg_num1].content = $reg[reg_num2].content || $reg[reg_num3].content;
+	// execute operation (or) 
+	reg[reg_num1].content = reg[reg_num2].content || reg[reg_num3].content;
 
 	return result;
 }
@@ -980,7 +979,7 @@ int ori(char* sArr_3[]) {
 	int result_temp;
 	int result = 0;
 
-	//'$'자르기
+	// erasing '$'
 	for (int j = 0; j < 4; j++) {
 		sArr_result[j] = strtok(sArr_3[j], "$");
 		printf("%s ", sArr_result[j]);
@@ -989,7 +988,7 @@ int ori(char* sArr_3[]) {
 	reg_num2 = atoi(sArr_result[2]);
 	immediate = atoi(sArr_result[3]);
 
-	// machine code 변환
+	// translate into machine code
 	temp_value = reg_num1;
 	for (i = 0; temp_value > 0; i++) {
 		bits[16 + i] = temp_value % 2;
@@ -1016,7 +1015,7 @@ int ori(char* sArr_3[]) {
 		temp_value /= 2;
 	}
 
-	// 모두 더한다
+	// adds all value of bits 
 	for (i = 0; i < 32; i++) {
 		result_temp = 1;
 		if (bits[i] == 1) {
@@ -1028,8 +1027,8 @@ int ori(char* sArr_3[]) {
 
 	}
 
-	// and 연산 실행
-	$reg[reg_num1].content = $reg[reg_num2].content || immediate;
+	// execute operation (ori) 
+	reg[reg_num1].content = reg[reg_num2].content || immediate;
 	return result;
 }
 int sltiu(char* sArr_3[]) {
@@ -1043,7 +1042,7 @@ int sltiu(char* sArr_3[]) {
 	int i;
 	int result_temp;
 	int result = 0;
-	//'$'자르기
+	//erasing '$'
 	for (int j = 0; j < 4; j++) {
 		sArr_result[j] = strtok(sArr_3[j], "$");
 		//printf("%s ", sArr_result[j]);
@@ -1051,7 +1050,7 @@ int sltiu(char* sArr_3[]) {
 	reg_num1 = atoi(sArr_result[1]);
 	reg_num2 = atoi(sArr_result[2]);
 	immediate = atoi(sArr_result[3]);
-	// machine code 변환
+	// translate into machine code
 	temp_value = reg_num1;
 	for (i = 0; temp_value > 0; i++) {
 		bits[16 + i] = temp_value % 2;
@@ -1078,7 +1077,7 @@ int sltiu(char* sArr_3[]) {
 		temp_value /= 2;
 	}
 
-	// 모두 더한다
+	// adds all value of bits 
 	for (i = 0; i < 32; i++) {
 		result_temp = 1;
 		if (bits[i] == 1) {
@@ -1089,8 +1088,8 @@ int sltiu(char* sArr_3[]) {
 		}
 
 	}
-	// sltiu 연산 실행
-	$reg[reg_num1].content = ($reg[reg_num2].content, immediate)? 1:0;
+	// execute operation (sltiu) 
+	reg[reg_num1].content = (reg[reg_num2].content, immediate)? 1:0;
 
 	return result;
 }
@@ -1105,7 +1104,7 @@ int sltu(char* sArr_3[]) {
 	int result_temp;
 	int result = 0;
 
-	//'$'자르기
+	//erasing '$'
 	for (int j = 0; j < 4; j++) {
 		sArr_result[j] = strtok(sArr_3[j], "$");
 		//printf("%s ", sArr_result[j]);
@@ -1116,7 +1115,7 @@ int sltu(char* sArr_3[]) {
 
 
 
-	// machine code 변환
+	// translate into machine code
 
 	temp_value = reg_num1;
 	for (i = 0; temp_value > 0; i++) {
@@ -1141,7 +1140,7 @@ int sltu(char* sArr_3[]) {
 		bits[i] = temp_value % 2;
 		temp_value /= 2;
 	}
-	// 모두 더한다
+	// adds all value of bits 
 	for (i = 0; i < 32; i++) {
 		result_temp = 1;
 		if (bits[i] == 1) {
@@ -1153,9 +1152,9 @@ int sltu(char* sArr_3[]) {
 
 	}
 
-	// sltu 연산 실행
+	// execute operation (sltu) 
 	//R[rd] = (R[rs] < R[rt]) ? 1 : 0
-	$reg[reg_num1].content = ($reg[reg_num2].content < $reg[reg_num3].content)? 1:0;
+	reg[reg_num1].content = (reg[reg_num2].content < reg[reg_num3].content)? 1:0;
 	return result;
 
 	return 0;
@@ -1170,7 +1169,7 @@ int sll(char* sArr_3[]) {
 	int result_temp;
 	int result = 0;
 
-	//'$'자르기
+	//erasing '$'
 	for (int j = 0; j < 4; j++) {
 		sArr_result[j] = strtok(sArr_3[j], "$");
 		//printf("%s ", sArr_result[j]);
@@ -1181,7 +1180,7 @@ int sll(char* sArr_3[]) {
 
 
 
-	// machine code 변환
+	//translate into machine code
 
 	temp_value = reg_num1;
 	for (i = 0; temp_value > 0; i++) {
@@ -1204,7 +1203,7 @@ int sll(char* sArr_3[]) {
 	// sll -> opcode = 0/00 (hex)
 
 	
-	// 모두 더한다
+	// adds all value of bits 
 	for (i = 0; i < 32; i++) {
 		result_temp = 1;
 		if (bits[i] == 1) {
@@ -1216,9 +1215,9 @@ int sll(char* sArr_3[]) {
 
 	}
 	
-	// 연산
-	for (int a = 0; a < $reg[shamt].content * 2; a++) {
-		$reg[reg_num1].content *= 2;
+	// execute operation (sll) 
+	for (int a = 0; a < reg[shamt].content * 2; a++) {
+		reg[reg_num1].content *= 2;
 	}
 	
 	return result;
@@ -1233,7 +1232,7 @@ int srl(char* sArr_3[]) {
 	int result_temp;
 	int result = 0;
 
-	//'$'자르기
+	//erasing '$'
 	for (int j = 0; j < 4; j++) {
 		sArr_result[j] = strtok(sArr_3[j], "$");
 		//printf("%s ", sArr_result[j]);
@@ -1242,7 +1241,7 @@ int srl(char* sArr_3[]) {
 	reg_num2 = atoi(sArr_result[2]);
 	shamt = atoi(sArr_result[3]);
 
-	// machine code 변환
+	// translate into machine code
 
 	temp_value = reg_num1;
 	for (i = 0; temp_value > 0; i++) {
@@ -1269,7 +1268,7 @@ int srl(char* sArr_3[]) {
 		temp_value /= 2;
 	}
 
-	// 모두 더한다
+	// adds all value of bits 
 	for (i = 0; i < 32; i++) {
 		result_temp = 1;
 		if (bits[i] == 1) {
@@ -1281,9 +1280,9 @@ int srl(char* sArr_3[]) {
 
 	}
 
-	// 연산
-	for (int a = 0; a < $reg[shamt].content * 2; a++) {
-		$reg[reg_num1].content /= 2;
+	// execute operation (srl) 
+	for (int a = 0; a < reg[shamt].content * 2; a++) {
+		reg[reg_num1].content /= 2;
 	}
 
 	return result;
@@ -1302,7 +1301,7 @@ int subu(char * sArr_3[]) {
 	int result_temp;
 	int result = 0;
 
-	//'$'자르기
+	//erasing '$'
 	for (int j = 0; j < 4; j++) {
 		sArr_result[j] = strtok(sArr_3[j], "$");
 		//printf("%s ", sArr_result[j]);
@@ -1311,7 +1310,7 @@ int subu(char * sArr_3[]) {
 	reg_num2 = atoi(sArr_result[2]);
 	reg_num3 = atoi(sArr_result[3]);
 
-	// machine code 변환
+	// translate into machine code
 
 	temp_value = reg_num1;
 	for (i = 0; temp_value > 0; i++) {
@@ -1336,7 +1335,7 @@ int subu(char * sArr_3[]) {
 		bits[i] = temp_value % 2;
 		temp_value /= 2;
 	}
-	// 모두 더한다
+	// adds all value of bits 
 	for (i = 0; i < 32; i++) {
 		result_temp = 1;
 		if (bits[i] == 1) {
@@ -1348,8 +1347,8 @@ int subu(char * sArr_3[]) {
 
 	}
 
-	// addu 연산 실행
-	$reg[reg_num1].content = $reg[reg_num2].content - $reg[reg_num3].content;
+	// execute operation (subu) 
+	reg[reg_num1].content = reg[reg_num2].content - reg[reg_num3].content;
 	return result;
 
 }
