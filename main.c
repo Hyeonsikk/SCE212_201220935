@@ -57,10 +57,11 @@ int bits[32] = { 0 }; // store each bit before translate into hexa code
 struct REGISTER reg[32]; // define register
 struct SYMBOL_TABLE table[10]; // define symbol table for one pass
 int sym_count = 0; // the number of symbol label
-int line_count = 0; // the number of instruction set 
+int line_count = 0; // the number of instruction set
+int flag = 0; // if flag = 1 , it is data section // if flag = 0, it is code section
 // instruction set
-char instruction[NUMINTRU][LENGINTRU] = { "ADDIU","ADDU","AND","ANDI","BEQ","BNE","J","JAL","JR","LUI","LW","LA","NOR","OR","ORI","SLTIU",
-"SLTU","SLL","SRL","SW","SUBU" };
+char instruction[NUMINTRU][LENGINTRU] = { "addiu","addu","and","andi","beq","bne","j","jal","jr","lui","lw","la","nor","or","ori","sltiu",
+"sltu","sll","srl","sw","subu" };
 
 
 
@@ -80,51 +81,79 @@ void pass1() {
 	char *ptr; // variable for erasing " " 
 	char *sArr[6] = { "" }; // store string after erasing " " 
 	char *sArr_2[6] = { "" }; // store string after erasing "," 
-	char *sArr_3[6] = { "" }; // store string after erasing "\t" 
 	int i = 0;
+	int i2 = 0;
+	
 
-	fin = fopen("test_in.s", "r");
+	fin = fopen("test_in.txt", "r");
 	//open error check
 	if (fin == NULL) {
 		printf("failed to file open\n");
 		return 1;
 	}
 	while (!feof(fin)) {
-		// read a line
-		fgets(s, 80, fin);
+		
 		// increment of PC 
 		PC = PC + 4;
 
+		// read a line
+		fgets(s, 80, fin);
+		ptr = strtok(s, "\t");
+		// erasing "\t"
+		while (ptr != NULL){
+			sArr[i] = ptr;     // 문자열을 자른 뒤 메모리 주소를 문자열 포인터 배열에 저장
+			i++;                       // 인덱스 증가
+			ptr = strtok(NULL, "\t");
+		}
 		// erasing " "
-		ptr = strtok(s, " ");
+		for (int j = 0; j < i; j++) {
+			sArr_2[j] = strtok(sArr[j], " ");
 
-		// main 안에만 구현했다고 가정
-
-		while (ptr != NULL) {
-			sArr[i] = ptr;  
-			i++;
-			ptr = strtok(NULL, " ");
+			while (sArr[j] != NULL){
+				sArr_2[i2] = sArr[j];     // 문자열을 자른 뒤 메모리 주소를 문자열 포인터 배열에 저장
+				i2++;                       // 인덱스 증가
+				sArr[j] = strtok(NULL, " ");
+			}
 		}
+
 		// erasing ','
-		for (int j = 0; j < i; j++) {
-			sArr_2[j] = strtok(sArr[j], ",");
+		for (int j = 0; j < i2; j++) {
+			sArr_2[j] = strtok(sArr_2[j], ",");
 		}
-		// erasing '\t'
-		for (int j = 0; j < i; j++) {
-			sArr_3[j] = strtok(sArr_2[j], "\t");
-			//printf("%s", sArr_3[j]);
+		
+		if (!strcmp(sArr_2[0], ".data")) {
+			PC = PC - 4;
+			i = 0;
+			i2 = 0;
+			flag = 1;
+			continue;
+		}else if (!strcmp(sArr_2[0], ".text")) {
+			PC = PC - 4;
+			i = 0;
+			i2 = 0;
+			flag = 0;
+			continue;
 		}
+		
 		
 		// if the string is label
-		if (!(strchr(sArr_3[0], ':') == NULL)) {
-			// adds symbol table
-			strcpy(table[sym_count].symbol, strtok(sArr_3[0], ":"));
-			table[sym_count].address = CUR_ADDR;
-			sym_count++;
+		if (!(strchr(sArr_2[0], ':') == NULL)) {
+			// data section
+			if (flag == 1) {
+
+			}else{
+				if (!strcmp(sArr_2[0], "main:")) {
+					continue;
+				}else {
+					strcpy(table[sym_count].symbol, strtok(sArr_2[0], ":"));
+					table[sym_count].address = CUR_ADDR;
+					sym_count++;
+				}// adds symbol table
+			}// code section
 		}
-		
 		CUR_ADDR = PC;
 		i = 0;
+		i2 = 0;
 	}
 	// prints symbol table
 	printf("--------SYMBOL_TABLE---------\n");
@@ -144,10 +173,10 @@ void pass2() {
 	char *ptr; // variable for erasing " " 
 	char *sArr[6] = { "" }; // store string after erasing " " 
 	char *sArr_2[6] = { "" }; // store string after erasing "," 
-	char *sArr_3[6] = { "" }; // store string after erasing "\t" 
 	int i = 0; // the number of token by line
+	int i2 = 0;
 
-	fin = fopen("test_in.s", "r");
+	fin = fopen("test_in.txt", "r");
 	fout = fopen("test_out.txt", "w");
 
 	if (fin == NULL) {
@@ -164,39 +193,67 @@ void pass2() {
 	PC = CUR_ADDR + 4;
 	line_count = 0;
 	while (!feof(fin)) {
-		// read a line
-		fgets(s, 80, fin);
 		// increment of PC 
 		PC = PC + 4;
 
-		// erasing " "
-		ptr = strtok(s, " ");
-		
-		while (ptr != NULL) {
-			sArr[i] = ptr; 
-			i++;
-			ptr = strtok(NULL, " ");
-		}
-		// erasing ","
-		for (int j = 0; j < i; j++) {
-			sArr_2[j] = strtok(sArr[j], ",");
-		}
+		// read a line
+		fgets(s, 80, fin);
+		ptr = strtok(s, "\t");
 		// erasing "\t"
-		for (int j = 0; j < i; j++) {
-			sArr_3[j] = strtok(sArr_2[j], "\t");
-			//printf("%s", sArr_3[j]);
+		while (ptr != NULL)           
+		{
+			sArr[i] = ptr;   
+			i++;             
+			ptr = strtok(NULL, "\t");
 		}
-		
+		// erasing " "
+		for (int j = 0; j < i; j++) {
+			sArr_2[j] = strtok(sArr[j], " ");
+
+			while (sArr[j] != NULL)            
+			{
+				sArr_2[i2] = sArr[j];    
+				i2++;                      
+				sArr[j] = strtok(NULL, " ");
+			}
+		}
+
+		// erasing ','
+		for (int j = 0; j < i2; j++) {
+			sArr_2[j] = strtok(sArr_2[j], ",");
+		}
+
+		if (!strcmp(sArr_2[0], ".data")) {
+			PC = PC - 4;
+			i = 0;
+			i2 = 0;
+			flag = 1;
+			continue;
+		}
+		else if (!strcmp(sArr_2[0], ".text")) {
+			PC = PC - 4;
+			i = 0;
+			i2 = 0;
+			flag = 0;
+			continue;
+		}
+		// if the string is LABEL or data section
+		if (!(strchr(sArr_2[0], ':') == NULL)) {
+			// data section
+			if (flag == 1) {
+				
+			}
+			else {
+				line[line_count].address = CUR_ADDR;
+				line[line_count].content = NULL;	
+			}
+		}
+
+		// if the string is not LABEL
 		// comparing with instruction set
 		for (int k = 0; k < NUMINTRU; k++) {
-			// if the string is LABEL
-			if (!(strchr(sArr_3[0], ':') == NULL)) {
-				line[line_count].address = CUR_ADDR;
-				line[line_count].content = NULL;
-				break;
-			}
-			// if the string is not LABEL
-			if (!strcmp(sArr_3[0], instruction[k])) {
+			
+			if (!strcmp(sArr_2[0], instruction[k])) {
 				modevalue = k;
 				// initializes bits
 				for (int a = 0; a < 32; a++) {
@@ -206,87 +263,87 @@ void pass2() {
 				{
 				case 0:
 					line[line_count].address = CUR_ADDR;
-					line[line_count].content = addiu(sArr_3);
+					line[line_count].content = addiu(sArr_2);
 					break;
 				case 1:
 					line[line_count].address = CUR_ADDR;
-					line[line_count].content = addu(sArr_3);
+					line[line_count].content = addu(sArr_2);
 					break;
 				case 2:
 					line[line_count].address = CUR_ADDR;
-					line[line_count].content = and (sArr_3);
+					line[line_count].content = and (sArr_2);
 					break;
 				case 3:
 					line[line_count].address = CUR_ADDR;
-					line[line_count].content = andi(sArr_3);
+					line[line_count].content = andi(sArr_2);
 					break;
 				case 4:
 					line[line_count].address = CUR_ADDR;
-					line[line_count].content = beq(sArr_3);
+					line[line_count].content = beq(sArr_2);
 					break;
 				case 5:
 					line[line_count].address = CUR_ADDR;
-					line[line_count].content = bne(sArr_3);
+					line[line_count].content = bne(sArr_2);
 					break;
 				case 6:
 					line[line_count].address = CUR_ADDR;
-					line[line_count].content = j(sArr_3);
+					line[line_count].content = j(sArr_2);
 					break;
 				case 7:
 					line[line_count].address = CUR_ADDR;
-					line[line_count].content = jal(sArr_3);
+					line[line_count].content = jal(sArr_2);
 					break;
 				case 8:
 					line[line_count].address = CUR_ADDR;
-					line[line_count].content = jr(sArr_3);
+					line[line_count].content = jr(sArr_2);
 					break;
 				case 9:
 					line[line_count].address = CUR_ADDR;
-					line[line_count].content = lui(sArr_3);
+					line[line_count].content = lui(sArr_2);
 					break;
 				case 10:
 					line[line_count].address = CUR_ADDR;
-					line[line_count].content = lw(sArr_3);
+					line[line_count].content = lw(sArr_2);
 					break;
 				case 11:
 					line[line_count].address = CUR_ADDR;
-					line[line_count].content = la(sArr_3);
+					line[line_count].content = la(sArr_2);
 					break;
 				case 12:
 					line[line_count].address = CUR_ADDR;
-					line[line_count].content = nor(sArr_3);
+					line[line_count].content = nor(sArr_2);
 					break;
 				case 13:
 					line[line_count].address = CUR_ADDR;
-					line[line_count].content = or (sArr_3);
+					line[line_count].content = or (sArr_2);
 					break;
 				case 14:
 					line[line_count].address = CUR_ADDR;
-					line[line_count].content = ori(sArr_3);
+					line[line_count].content = ori(sArr_2);
 					break;
 				case 15:
 					line[line_count].address = CUR_ADDR;
-					line[line_count].content = sltiu(sArr_3);
+					line[line_count].content = sltiu(sArr_2);
 					break;
 				case 16:
 					line[line_count].address = CUR_ADDR;
-					line[line_count].content = sltu(sArr_3);
+					line[line_count].content = sltu(sArr_2);
 					break;
 				case 17:
 					line[line_count].address = CUR_ADDR;
-					line[line_count].content = sll(sArr_3);
+					line[line_count].content = sll(sArr_2);
 					break;
 				case 18:
 					line[line_count].address = CUR_ADDR;
-					line[line_count].content = srl(sArr_3);
+					line[line_count].content = srl(sArr_2);
 					break;
 				case 19:
 					line[line_count].address = CUR_ADDR;
-					line[line_count].content = sw(sArr_3);
+					line[line_count].content = sw(sArr_2);
 					break;
 				case 20:
 					line[line_count].address = CUR_ADDR;
-					line[line_count].content = subu(sArr_3);
+					line[line_count].content = subu(sArr_2);
 					break;
 				default:
 					break;
@@ -298,6 +355,7 @@ void pass2() {
 		CUR_ADDR = PC;
 		line_count++;
 		i = 0;
+		i2 = 0;
 	}
 	// prints the result 
 	printf("---------INSTRUCTION----------\n");
