@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <math.h>
+
 
 #define NUMINTRU  21 // the number of instrunction
 #define LENGINTRU 6 // the maximum length of instruction
@@ -33,6 +35,8 @@ int sll(char* sArr[]);
 int srl(char* sArr[]);
 int sw(char* sArr[]);
 int subu(char* sArr[]);
+// translate hexa number into decimal number
+int hexTodec(char* sArr);
 
 // SYMBOL table
 struct SYMBOL_TABLE {
@@ -418,7 +422,13 @@ int addiu(char * sArr_3[]) {
 	}
 	reg_num1 = atoi(sArr_result[1]);
 	reg_num2 = atoi(sArr_result[2]);
-	immediate = atoi(sArr_result[3]);
+	// if immediate value is in hexa number 
+	if (!((strchr(sArr_result[3], 'x') == NULL))) {
+		immediate = hexTodec(sArr_result[3]);
+	}
+	else {
+		immediate = atoi(sArr_result[3]);
+	}
 	// translate into machine code 
 	temp_value = reg_num1;
 	for (i = 0; temp_value > 0; i++) {
@@ -601,7 +611,14 @@ int andi(char* sArr_3[]) {
 	}
 	reg_num1 = atoi(sArr_result[1]);
 	reg_num2 = atoi(sArr_result[2]);
-	immediate = atoi(sArr_result[3]);
+
+	// if immediate value is in hexa number 
+	if (!((strchr(sArr_result[3], 'x') == NULL))) {
+		immediate = hexTodec(sArr_result[3]);
+	}
+	else {
+		immediate = atoi(sArr_result[3]);
+	}
 
 	// translate into machine code 
 	temp_value = reg_num1;
@@ -1076,7 +1093,14 @@ int ori(char* sArr_3[]) {
 	}
 	reg_num1 = atoi(sArr_result[1]);
 	reg_num2 = atoi(sArr_result[2]);
-	immediate = atoi(sArr_result[3]);
+
+	// if immediate value is in hexa number 
+	if (!((strchr(sArr_result[3], 'x') == NULL))) {
+		immediate = hexTodec(sArr_result[3]);
+	}
+	else {
+		immediate = atoi(sArr_result[3]);
+	}
 
 	// translate into machine code
 	temp_value = reg_num1;
@@ -1139,7 +1163,15 @@ int sltiu(char* sArr_3[]) {
 	}
 	reg_num1 = atoi(sArr_result[1]);
 	reg_num2 = atoi(sArr_result[2]);
-	immediate = atoi(sArr_result[3]);
+
+	// if immediate value is in hexa number 
+	if (!((strchr(sArr_result[3], 'x') == NULL))) {
+		immediate = hexTodec(sArr_result[3]);
+	}
+	else {
+		immediate = atoi(sArr_result[3]);
+	}
+
 	// translate into machine code
 	temp_value = reg_num1;
 	for (i = 0; temp_value > 0; i++) {
@@ -1441,4 +1473,28 @@ int subu(char * sArr_3[]) {
 	reg[reg_num1].content = reg[reg_num2].content - reg[reg_num3].content;
 	return result;
 
+}
+int hexTodec(char* sArr) {
+	char* hexadecimal = { NULL, };
+	hexadecimal = sArr;
+	int decimal = 0;             
+
+	int position = 0;
+	for (int i = strlen(hexadecimal) - 2; i >= 2; i--){
+		char ch = hexadecimal[i]; 
+		if (ch >= 48 && ch <= 57){
+			decimal += (ch - 48) * pow(16, position);
+		}
+		else if (ch >= 65 && ch <= 70){                                 
+			decimal += (ch - (65 - 10)) * pow(16, position);
+		}
+		else if (ch >= 97 && ch <= 102){
+			decimal += (ch - (97 - 10)) * pow(16, position);
+		}
+
+		position++;
+	}
+	//printf("%d", decimal);
+
+	return decimal;
 }
