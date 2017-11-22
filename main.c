@@ -49,16 +49,27 @@ struct REGISTER {
 	int content;
 	int address;
 };
+struct DATA {
+	char dataname[10];
+	int content;
+	int address;
+};
 
 int PC = 4194308; // program counter
 int CUR_ADDR = 4194304; // current address
+int DATA_ADDR = 268435456; // data address
 int bits[32] = { 0 }; // store each bit before translate into hexa code
 // define register (0 - 31) 
 struct REGISTER reg[32]; // define register
 struct SYMBOL_TABLE table[10]; // define symbol table for one pass
+struct DATA data[100];
 int sym_count = 0; // the number of symbol label
 int line_count = 0; // the number of instruction set
+int data_count = 0;
 int flag = 0; // if flag = 1 , it is data section // if flag = 0, it is code section
+char *datasec = ".data\n";
+char *textsec = ".text\n";
+char *labelmain = "main:\n";
 // instruction set
 char instruction[NUMINTRU][LENGINTRU] = { "addiu","addu","and","andi","beq","bne","j","jal","jr","lui","lw","la","nor","or","ori","sltiu",
 "sltu","sll","srl","sw","subu" };
@@ -81,6 +92,7 @@ void pass1() {
 	char *ptr; // variable for erasing " " 
 	char *sArr[6] = { "" }; // store string after erasing " " 
 	char *sArr_2[6] = { "" }; // store string after erasing "," 
+	
 	int i = 0;
 	int i2 = 0;
 	
@@ -120,19 +132,16 @@ void pass1() {
 		for (int j = 0; j < i2; j++) {
 			sArr_2[j] = strtok(sArr_2[j], ",");
 		}
-		
-		if (!strcmp(sArr_2[0], ".data")) {
+		if (!strcmp(sArr_2[0],datasec) ){
 			PC = PC - 4;
 			i = 0;
 			i2 = 0;
 			flag = 1;
-			continue;
-		}else if (!strcmp(sArr_2[0], ".text")) {
+		}else if (!strcmp(sArr_2[0], textsec)) {
 			PC = PC - 4;
 			i = 0;
 			i2 = 0;
 			flag = 0;
-			continue;
 		}
 		
 		
@@ -140,14 +149,28 @@ void pass1() {
 		if (!(strchr(sArr_2[0], ':') == NULL)) {
 			// data section
 			if (flag == 1) {
-
+				strcpy(data[data_count].dataname, strtok(sArr_2[0], ":"));
+				// data type is always .word
+				if (!((strchr(sArr_2[2], 'x') == NULL))) {
+					data[data_count].address = DATA_ADDR;
+					DATA_ADDR += 4;
+					data[data_count].content = atoi(sArr_2[2]);
+					data_count++;
+				}
+				else {
+					data[data_count].address = DATA_ADDR;
+					DATA_ADDR += (4 * atoi(sArr_2[2]));
+					data_count ++;
+				}
 			}else{
-				if (!strcmp(sArr_2[0], "main:")) {
-					continue;
+				if (!strcmp(sArr_2[0], labelmain)) {
+					PC = 4194308; // program counter
+					CUR_ADDR = 4194304; // current address
 				}else {
 					strcpy(table[sym_count].symbol, strtok(sArr_2[0], ":"));
 					table[sym_count].address = CUR_ADDR;
 					sym_count++;
+					
 				}// adds symbol table
 			}// code section
 		}
@@ -159,6 +182,10 @@ void pass1() {
 	printf("--------SYMBOL_TABLE---------\n");
 	for (int z = 0; z < sym_count; z++) {
 		printf("SYMBOL : %s ADDR : 0x%x\n", table[z].symbol, table[z].address);
+	}
+	printf("--------DATA_TABLE---------\n");
+	for (int z = 0; z < data_count; z++) {
+		printf("DATA : %s ADDR : 0x%x\n", data[z].dataname, data[z].address);
 	}
 	fclose(fin);
 }
@@ -223,27 +250,31 @@ void pass2() {
 			sArr_2[j] = strtok(sArr_2[j], ",");
 		}
 
-		if (!strcmp(sArr_2[0], ".data")) {
+		if (!strcmp(sArr_2[0], datasec)) {
 			PC = PC - 4;
 			i = 0;
 			i2 = 0;
 			flag = 1;
-			continue;
+			line_count--;
 		}
-		else if (!strcmp(sArr_2[0], ".text")) {
+		else if (!strcmp(sArr_2[0], textsec)) {
 			PC = PC - 4;
 			i = 0;
 			i2 = 0;
 			flag = 0;
-			continue;
+			line_count--;
 		}
 		// if the string is LABEL or data section
 		if (!(strchr(sArr_2[0], ':') == NULL)) {
 			// data section
 			if (flag == 1) {
-				
+				line_count--;
 			}
 			else {
+				if (!strcmp(sArr_2[0], labelmain)) {
+					PC = 4194308; // program counter
+					CUR_ADDR = 4194304; // current address
+				}
 				line[line_count].address = CUR_ADDR;
 				line[line_count].content = NULL;	
 			}
@@ -349,21 +380,22 @@ void pass2() {
 					break;
 				}
 			}
-
+			
 		}
-
 		CUR_ADDR = PC;
 		line_count++;
 		i = 0;
 		i2 = 0;
 	}
 	// prints the result 
-	printf("---------INSTRUCTION----------\n");
-	for (int a = 0; a < line_count; a++) {
-		printf("address : 0x%06x  content : 0x%08x\n", line[a].address, line[a].content);
+	if (flag == 0) {
+		printf("---------INSTRUCTION----------\n");
+		for (int a = 0; a < line_count; a++) {
+			printf("address : 0x%06x  content : 0x%08x\n", line[a].address, line[a].content);
+		}
+		// prints the number of label
+		printf("line : %d \n", line_count);
 	}
-	// prints the number of label
-	printf("line : %d \n", line_count);
 	//printf("Cur addr : %x\n", CUR_ADDR);
 	//printf("pc : %x\n", PC);
 
